@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Results - Internship Recommendation{% endblock %}
+{% block content %}
+<h2 class="mb-3">Recommendation</h2>
+<div class="card p-3">
+  <h5>{{ rec.internship.title }} <span class="text-muted-2">@ {{ rec.internship.company }}</span></h5>
+  <p class="text-muted-2">{{ rec.internship.description }}</p>
+  <div class="d-flex gap-2 flex-wrap">
+    <span class="chip">Duration: {{ rec.internship.duration }}</span>
+    <span class="chip">Stipend: ${{ rec.internship.stipend }}</span>
+    <span class="chip">Rating: {{ rec.internship.rating }}/5</span>
+    <span class="chip">Popularity: {{ rec.internship.popularity }}/100</span>
+    <span class="chip">Prestige: {{ rec.internship.company_prestige }}/10</span>
+  </div>
+  <div class="mt-3">
+    <h6>Explanation</h6>
+    <pre class="text-muted-2" style="white-space:pre-wrap">{{ rec.explanation }}</pre>
+  </div>
+</div>
+{% endblock %}

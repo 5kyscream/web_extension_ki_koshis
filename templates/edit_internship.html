@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Edit Internship - PM Internship Portal{% endblock %}
+{% block head %}
+  <style>
+    .form-label {
+      font-weight: 500;
+    }
+  </style>
+{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <h2 class="mb-3 text-center">Edit Internship 📝</h2>
+      <form id="editForm" class="card p-4">
+        <input type="hidden" name="id" value="{{ internship.id }}">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Internship Title</label>
+            <input required name="title" class="form-control" value="{{ internship.title }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Company</label>
+            <input required name="company" class="form-control" value="{{ internship.company }}">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Description</label>
+            <textarea required name="description" class="form-control" rows="3">{{ internship.description }}</textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Required skills</label>
+            <input required name="required_skills" class="form-control" value="{{ internship.required_skills }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Duration</label>
+            <input required name="duration" class="form-control" value="{{ internship.duration }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Stipend (₹)</label>
+            <input required type="number" name="stipend" class="form-control" min="0" step="1" value="{{ internship.stipend }}">
+          </div>
+        </div>
+        <div class="mt-4 d-flex gap-2">
+          <button class="btn btn-brand" type="submit">Update Internship</button>
+          <a href="/company-dashboard" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const form = document.getElementById('editForm');
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(form);
+    const payload = Object.fromEntries(fd.entries());
+    payload.stipend = Number(payload.stipend);
+    try{
+      await jsonFetch(`/api/internship/update`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      showToast('Internship updated successfully','success');
+      window.location.href = '/company-dashboard';
+    }catch(err){
+      showToast(err.message,'danger');
+    }
+  });
+</script>
+{% endblock %}

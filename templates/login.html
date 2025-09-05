@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Login - Internship Recommendation{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+      <div class="card p-4 shadow-sm">
+        <h2 class="mb-4 text-center">Login to your account 🔑</h2>
+        <form id="loginForm">
+          <div class="mb-3">
+            <label for="email" class="form-label">Email address</label>
+            <input type="email" class="form-control" id="email" name="email" required>
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+          </div>
+          <button type="submit" class="btn btn-brand w-100">Login</button>
+        </form>
+        <p class="text-center mt-3 text-muted-2">
+          Don't have an account? <a href="/signup" class="text-decoration-none">Sign up here</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const loginForm = document.getElementById('loginForm');
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(loginForm);
+    const payload = Object.fromEntries(formData.entries());
+
+    try {
+      const result = await jsonFetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      showToast('Login successful! Redirecting...', 'success');
+      // Redirect based on user role
+      if (result.role === 'company') {
+        window.location.href = '/company-dashboard';
+      } else {
+        window.location.href = '/student-dashboard';
+      }
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  });
+</script>
+{% endblock %}

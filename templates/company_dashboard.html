@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}Department Dashboard{% endblock %}
+
+{% block head %}
+<style>
+    .dashboard-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+    .stat-label {
+        color: #666;
+        margin-top: 0.5rem;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        cursor: pointer;
+        margin-bottom: 2rem;
+    }
+    .btn-primary:hover {
+        opacity: 0.9;
+        color: white;
+    }
+    .internships-table {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .table-header {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-bottom: 1px solid #eee;
+    }
+    .table-content {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    th, td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+    th {
+        background: #f8f9fa;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+    }
+    .btn-delete {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.875rem;
+    }
+    .btn-delete:hover {
+        background: #c82333;
+    }
+    .loading {
+        text-align: center;
+        padding: 2rem;
+        color: #666;
+    }
+    .no-data {
+        text-align: center;
+        padding: 2rem;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="dashboard-header">
+        <h1>Welcome, {{ g.user.name }}</h1>
+        <p>Manage internship opportunities for your organization</p>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number" id="totalInternships">-</div>
+            <div class="stat-label">Total Internships</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="avgRating">-</div>
+            <div class="stat-label">Average Rating</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="totalStipend">-</div>
+            <div class="stat-label">Total Monthly Stipend</div>
+        </div>
+    </div>
+    
+    <a href="/add-internship" class="btn-primary">+ Add New Internship</a>
+    
+    <div class="internships-table">
+        <div class="table-header">
+            <h3>Your Internship Opportunities</h3>
+        </div>
+        <div class="table-content">
+            <div id="loading" class="loading">Loading internships...</div>
+            <div id="noData" class="no-data" style="display: none;">
+                <h4>No internships found</h4>
+                <p>Start by adding your first internship opportunity!</p>
+            </div>
+            <table id="internshipsTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Duration</th>
+                        <th>Stipend</th>
+                        <th>Rating</th>
+                        <th>Popularity</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="internshipsBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+async function loadInternships() {
+    try {
+        const response = await fetch('/api/company/internships');
+        const internships = await response.json();
+        
+        document.getElementById('loading').style.display = 'none';
+        
+        if (internships.length === 0) {
+            document.getElementById('noData').style.display = 'block';
+            updateStats(internships);
+            return;
+        }
+        
+        document.getElementById('internshipsTable').style.display = 'table';
+        
+        const tbody = document.getElementById('internshipsBody');
+        tbody.innerHTML = '';
+        
+        internships.forEach(internship => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${internship.title}</strong><br><small>${internship.description?.substring(0, 50) || ''}...</small></td>
+                <td>${internship.duration}</td>
+                <td>₹${internship.stipend?.toLocaleString() || 0}</td>
+                <td>${internship.rating || 'N/A'}/5</td>
+                <td>${internship.popularity || 0}%</td>
+                <td>
+                    <button class="btn-delete" onclick="deleteInternship(${internship.id})">Delete</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        updateStats(internships);
+        
+    } catch (error) {
+        console.error('Error loading internships:', error);
+        document.getElementById('loading').textContent = 'Error loading internships';
+    }
+}
+
+function updateStats(internships) {
+    document.getElementById('totalInternships').textContent = internships.length;
+    
+    if (internships.length > 0) {
+        const avgRating = (internships.reduce((sum, i) => sum + (i.rating || 0), 0) / internships.length).toFixed(1);
+        const totalStipend = internships.reduce((sum, i) => sum + (i.stipend || 0), 0);
+        
+        document.getElementById('avgRating').textContent = avgRating;
+        document.getElementById('totalStipend').textContent = '₹' + totalStipend.toLocaleString();
+    } else {
+        document.getElementById('avgRating').textContent = '0.0';
+        document.getElementById('totalStipend').textContent = '₹0';
+    }
+}
+
+async function deleteInternship(id) {
+    if (!confirm('Are you sure you want to delete this internship?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/internship/delete/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            loadInternships(); // Reload the list
+        } else {
+            const error = await response.json();
+            alert('Error deleting internship: ' + error.error);
+        }
+    } catch (error) {
+        console.error('Error deleting internship:', error);
+        alert('Error deleting internship');
+    }
+}
+
+// Load internships when page loads
+document.addEventListener('DOMContentLoaded', loadInternships);
+</script>
+{% endblock %}

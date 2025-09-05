@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Upload Resume - Internship Recommendation{% endblock %}
+{% block head %}
+  <style>
+    #drop.is-dragover {
+      background-color: #1a222e;
+      border-color: var(--brand)!important;
+    }
+  </style>
+{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <h2 class="mb-3 text-center">Find your perfect internship 🎯</h2>
+      <p class="text-muted-2 text-center mb-4">Upload a PDF resume to get top 5 recommended internships with detailed, explainable scores.</p>
+      
+      <div id="drop" class="p-5 border border-2 rounded-4 text-center"
+           style="border-color:#2a3444!important; background:#0c1117;">
+        <input id="file" type="file" accept="application/pdf" hidden />
+        <i class="fas fa-cloud-upload-alt text-muted-2 mb-3" style="font-size: 3rem;"></i>
+        <p class="mb-3">Drag & drop a PDF here, or</p>
+        <button class="btn btn-brand" onclick="document.getElementById('file').click()">Choose File</button>
+        <p class="text-muted-2 mt-2 small">Only PDF files are supported.</p>
+      </div>
+
+      <div class="progress mt-4 d-none" id="prog-wrap" style="height: 5px;">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" id="prog" style="width: 0%"></div>
+      </div>
+
+      <div id="results" class="mt-4"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const drop = document.getElementById('drop');
+  const fileInput = document.getElementById('file');
+  const progWrap = document.getElementById('prog-wrap');
+  const prog = document.getElementById('prog');
+  const results = document.getElementById('results');
+
+  ;['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => {e.preventDefault(); drop.classList.add('is-dragover');}));
+  ;['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => {e.preventDefault(); drop.classList.remove('is-dragover');}));
+  drop.addEventListener('drop', e => {
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) handleFile(file);
+  });
+
+  async function handleFile(file){
+    if(!file.name.toLowerCase().endsWith('.pdf')){
+      showToast('Only PDF files are supported','danger'); return;
+    }
+    
+    progWrap.classList.remove('d-none'); 
+    prog.style.width='10%'; 
+    results.innerHTML = `<div class="card p-4 text-center text-muted-2"><i class="fas fa-spinner fa-spin me-2"></i> Analyzing your resume...</div>`;
+
+    try{
+      const fd = new FormData(); fd.append('resume', file);
+      const res = await fetch('/recommend', { method:'POST', body: fd });
+      const data = await res.json();
+      if(!res.ok){ throw new Error(data?.error || 'Failed to get recommendations'); }
+      renderResults(data);
+      showToast('Recommendations ready','success');
+    }catch(err){
+      results.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+      showToast(err.message,'danger');
+    }finally{
+      prog.style.width='100%';
+      setTimeout(()=>{progWrap.classList.add('d-none'); prog.style.width='0%';}, 600);
+    }
+  }
+
+  function renderResults(list){
+    if(!Array.isArray(list) || list.length===0){
+      results.innerHTML = '<div class="alert alert-warning">No recommendations found.</div>'; return;
+    }
+    results.innerHTML = list.map((rec, idx) => card(rec, idx)).join('');
+  }
+
+  function badge(label){ return `<span class="chip"><i class="fas fa-check-circle me-1 text-success-emphasis"></i>${label}</span>`; }
+
+  function card(rec, idx){
+    const it = rec.internship || {};
+    const explanation = (rec.explanation || '').replace(/\n/g, '<br/>');
+    return `
+      <div class="card p-4 mb-3">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h5 class="fw-bold mb-1">${it.title || 'Untitled'} <span class="text-muted-2 fw-normal">@ ${it.company || 'Unknown'}</span></h5>
+            <div class="d-flex gap-2 flex-wrap">
+              ${badge('Score: ' + (rec.score ?? 0).toFixed(3))}
+              ${it.duration ? badge('Duration: ' + it.duration) : ''}
+              ${typeof it.stipend!=='undefined' ? badge('Stipend: $' + it.stipend) : ''}
+              ${typeof it.rating!=='undefined' ? badge('Rating: ' + it.rating + '/5') : ''}
+              ${typeof it.popularity!=='undefined' ? badge('Popularity: ' + it.popularity + '/100') : ''}
+              ${typeof it.company_prestige!=='undefined' ? badge('Prestige: ' + it.company_prestige + '/10') : ''}
+            </div>
+          </div>
+          <span class="badge bg-brand py-2 px-3">#${idx+1}</span>
+        </div>
+        <p class="mt-3 mb-2 text-muted-2">${it.description || ''}</p>
+        <details class="mt-2">
+          <summary class="text-info-emphasis small fw-semibold">See match explanation</summary>
+          <div class="mt-2 small text-muted-2">${explanation}</div>
+        </details>
+      </div>
+    `;
+  }
+</script>
+{% endblock %}

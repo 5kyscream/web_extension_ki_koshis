@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Home - PM Internship Scheme Portal{% endblock %}
+{% block content %}
+<section class="hero rounded-3 p-5 mb-4 card">
+  <div class="row align-items-center">
+    <div class="col-lg-7">
+      <h1 class="display-5 fw-bold text-primary">Prime Minister's Internship Scheme</h1>
+      <h2 class="h4 text-secondary fw-normal">Smart Allocation Portal</h2>
+      <p class="lead text-muted mt-3">
+        A functional prototype developed for the <strong>Ministry of Corporate Affairs</strong> to intelligently match student skills and academic profiles with relevant internship opportunities.
+      </p>
+      <div class="d-grid gap-2 d-md-flex justify-content-md-start mt-4">
+        {% if g.user %}
+          <a class="btn btn-brand btn-lg px-4 me-md-2" href="/dashboard">Go to Dashboard</a>
+        {% else %}
+          <a class="btn btn-brand btn-lg px-4 me-md-2" href="/login">Login</a>
+          <a class="btn btn-outline-primary btn-lg px-4" href="/signup">Register</a>
+        {% endif %}
+      </div>
+    </div>
+    <div class="col-lg-5 mt-4 mt-lg-0 d-none d-lg-block text-center">
+      <img src="https://t4.ftcdn.net/jpg/05/20/14/79/360_F_520147918_9HeZpQo2stop2ARloE7GEzkcNjC9y8tx.jpg" class="img-fluid rounded-3" alt="Parliament of India">
+    </div>
+  </div>
+</section>
+
+<div class="row g-4">
+  <div class="col-md-4">
+    <div class="card p-3 h-100">
+      <div class="card-body text-center">
+        <h2 class="text-primary"><i class="fas fa-file-alt"></i></h2>
+        <h5 class="card-title">Automated Skill Analysis</h5>
+        <p class="card-text text-muted">The engine automatically extracts and analyzes key skills directly from student resumes, eliminating manual data entry.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 h-100">
+      <div class="card-body text-center">
+        <h2 class="text-primary"><i class="fas fa-cogs"></i></h2>
+        <h5 class="card-title">Intelligent Matchmaking</h5>
+        <p class="card-text text-muted">Leverages an AI-powered algorithm to ensure students are matched to internships that best fit their profiles and capabilities.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 h-100">
+      <div class="card-body text-center">
+        <h2 class="text-primary"><i class="fas fa-chart-bar"></i></h2>
+        <h5 class="card-title">Departmental Oversight</h5>
+        <p class="card-text text-muted">Provides a dashboard for ministries to manage internship postings and view applicant data efficiently.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

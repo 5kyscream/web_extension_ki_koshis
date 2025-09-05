@@ -1,0 +1,297 @@
+{% extends "base.html" %} 
+{% block title %}Student Dashboard{% endblock %} 
+
+{% block head %}
+<style>
+    .upload-section {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    .upload-area {
+        border: 2px dashed #ddd;
+        border-radius: 10px;
+        padding: 3rem;
+        margin: 1rem 0;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .upload-area:hover {
+        border-color: #667eea;
+        background: #f8f9ff;
+    }
+    .upload-area.dragover {
+        border-color: #667eea;
+        background: #f0f4ff;
+    }
+    .upload-icon {
+        font-size: 3rem;
+        color: #667eea;
+        margin-bottom: 1rem;
+    }
+    .btn-upload {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 1rem;
+    }
+    .results-section {
+        display: none;
+    }
+    .recommendation-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #667eea;
+    }
+    .match-score {
+        background: #667eea;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: bold;
+        float: right;
+    }
+    .internship-title {
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+    .company-name {
+        color: #667eea;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    .internship-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin: 1rem 0;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 5px;
+    }
+    .detail-item {
+        text-align: center;
+    }
+    .detail-value {
+        font-weight: bold;
+        color: #333;
+    }
+    .detail-label {
+        font-size: 0.875rem;
+        color: #666;
+    }
+    .explanation {
+        background: #f0f4ff;
+        padding: 1rem;
+        border-radius: 5px;
+        margin-top: 1rem;
+        font-size: 0.9rem;
+    }
+    .star-button {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        float: right;
+        margin-left: 1rem;
+    }
+    .star-button.starred {
+        color: #ffc107;
+    }
+    .loading {
+        text-align: center;
+        padding: 2rem;
+        display: none;
+    }
+    .error-message {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 1rem;
+        border-radius: 5px;
+        margin: 1rem 0;
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Student Dashboard</h1>
+    <p>Upload your resume (PDF) to find your top matches. Use the star icon ⭐ to shortlist opportunities you're interested in.</p>
+    
+    <div class="upload-section">
+        <h3>Upload Your Resume</h3>
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📄</div>
+            <p><strong>Drag & drop your PDF resume here, or</strong></p>
+            <button class="btn-upload" onclick="document.getElementById('resumeFile').click()">Choose File</button>
+            <input type="file" id="resumeFile" accept=".pdf" style="display: none;">
+            <p style="margin-top: 1rem; color: #666; font-size: 0.875rem;">Only PDF files are supported</p>
+        </div>
+        <div class="error-message" id="errorMessage"></div>
+        <div class="loading" id="loading">
+            <p>🔄 Analyzing your resume and finding matches...</p>
+        </div>
+    </div>
+    
+    <div class="results-section" id="resultsSection">
+        <h3>Your Top Matches</h3>
+        <div id="recommendationsContainer"></div>
+    </div>
+</div>
+
+<script>
+const uploadArea = document.getElementById('uploadArea');
+const fileInput = document.getElementById('resumeFile');
+const errorMessage = document.getElementById('errorMessage');
+const loading = document.getElementById('loading');
+const resultsSection = document.getElementById('resultsSection');
+const recommendationsContainer = document.getElementById('recommendationsContainer');
+
+// Drag and drop functionality
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+});
+
+uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+});
+
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleFile(files[0]);
+    }
+});
+
+fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+    }
+});
+
+function handleFile(file) {
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+        showError('Please upload a PDF file only.');
+        return;
+    }
+    
+    uploadResume(file);
+}
+
+async function uploadResume(file) {
+    const formData = new FormData();
+    formData.append('resume', file);
+    
+    hideError();
+    loading.style.display = 'block';
+    resultsSection.style.display = 'none';
+    
+    try {
+        const response = await fetch('/find-matches', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        loading.style.display = 'none';
+        
+        if (response.ok) {
+            displayRecommendations(data);
+        } else {
+            showError(data.error || 'Error processing your resume. Please try again.');
+        }
+    } catch (error) {
+        loading.style.display = 'none';
+        showError('Network error. Please check your connection and try again.');
+    }
+}
+
+function displayRecommendations(recommendations) {
+    recommendationsContainer.innerHTML = '';
+    
+    recommendations.forEach((rec, index) => {
+        const card = document.createElement('div');
+        card.className = 'recommendation-card';
+        
+        const matchPercentage = Math.round(rec.score * 100);
+        
+        card.innerHTML = `
+            <div class="match-score">${matchPercentage}% Match</div>
+            <button class="star-button" onclick="toggleStar(this)" title="Shortlist this opportunity">⭐</button>
+            
+            <div class="internship-title">${rec.internship.title}</div>
+            <div class="company-name">${rec.internship.company}</div>
+            
+            <div class="internship-details">
+                <div class="detail-item">
+                    <div class="detail-value">${rec.internship.duration}</div>
+                    <div class="detail-label">Duration</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-value">₹${rec.internship.stipend?.toLocaleString() || 0}</div>
+                    <div class="detail-label">Stipend</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-value">${rec.internship.rating || 'N/A'}/5</div>
+                    <div class="detail-label">Rating</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-value">${rec.internship.popularity || 0}%</div>
+                    <div class="detail-label">Popularity</div>
+                </div>
+            </div>
+            
+            <p><strong>Description:</strong> ${rec.internship.description}</p>
+            <p><strong>Required Skills:</strong> ${rec.internship.required_skills}</p>
+            
+            <div class="explanation">
+                <strong>Why this matches:</strong><br>
+                ${rec.explanation.replace(/\n/g, '<br>')}
+            </div>
+            
+            ${rec.internship.apply_url ? `<p><a href="${rec.internship.apply_url}" target="_blank" style="color: #667eea;">Apply Here →</a></p>` : ''}
+        `;
+        
+        recommendationsContainer.appendChild(card);
+    });
+    
+    resultsSection.style.display = 'block';
+}
+
+function toggleStar(button) {
+    button.classList.toggle('starred');
+    if (button.classList.contains('starred')) {
+        button.title = 'Remove from shortlist';
+    } else {
+        button.title = 'Shortlist this opportunity';
+    }
+}
+
+function showError(message) {
+    errorMessage.textContent = message;
+    errorMessage.style.display = 'block';
+}
+
+function hideError() {
+    errorMessage.style.display = 'none';
+}
+</script>
+{% endblock %}
