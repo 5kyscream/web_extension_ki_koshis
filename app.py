@@ -6,11 +6,23 @@ from functools import wraps
 from backend import recommendInternship
 import fitz  # PyMuPDF
 import nltk
+import os
 
+# Set a folder for NLTK data
+nltk_data_dir = os.path.join(os.path.dirname(__file__), 'nltk_data')
+os.makedirs(nltk_data_dir, exist_ok=True)
+nltk.data.path.append(nltk_data_dir)
+
+# Download required resources
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
-    nltk.download('punkt')
+    nltk.download('punkt', download_dir=nltk_data_dir)
+
+try:
+    nltk.data.find('tokenizers/punkt_tab/english')
+except LookupError:
+    nltk.download('punkt', download_dir=nltk_data_dir)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "a-secure-default-secret-key-for-development")
