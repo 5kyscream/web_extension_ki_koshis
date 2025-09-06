@@ -7,6 +7,9 @@ from backend import recommendInternship
 import fitz  # PyMuPDF
 import nltk
 import os
+import traceback
+
+
 
 # Set a folder for NLTK data
 nltk_data_dir = os.path.join(os.path.dirname(__file__), 'nltk_data')
@@ -14,18 +17,77 @@ os.makedirs(nltk_data_dir, exist_ok=True)
 nltk.data.path.append(nltk_data_dir)
 
 # Download required resources
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt', download_dir=nltk_data_dir)
+# --- NLTK setup to fix punkt_tab issue ---
+nltk_data_dir = os.path.join(os.path.dirname(__file__), 'nltk_data')
+os.makedirs(nltk_data_dir, exist_ok=True)
+nltk.data.path.append(nltk_data_dir)
+
 
 try:
-    nltk.data.find('tokenizers/punkt_tab/english')
+nltk.data.find('tokenizers/punkt')
 except LookupError:
-    nltk.download('punkt', download_dir=nltk_data_dir)
+nltk.download('punkt', download_dir=nltk_data_dir)
+
+
+# Monkey-patch to bypass punkt_tab issue
+from nltk.tokenize.punkt import PunktLanguageVars, PunktSentenceTokenizer
+class FixedPunktLanguageVars(PunktLanguageVars):
+pass
+PunktSentenceTokenizer._lang_vars = FixedPunktLanguageVars()
+
+
+# --- Flask app setup ---
+from backend import recommendInternship, preprocess
+from data import internships # adjust according to your project structure
+
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "a-secure-default-secret-key-for-development")
+
+
+def extract_text_from_pdf(file):
+"""Extract text safely from a PDF file."""
+try:
+reader = PdfReader(file)
+text = ""
+for page in reader.pages:
+page_text = page.extract_text()
+if page_text:
+text += page_text + " "
+return text.strip()
+except Exception as e:
+raise ValueError(f"Failed to read PDF: {e}")
+
+
+@app.route('/find-matches', methods=['POST'])
+def find_matches():
+try:
+# Get uploaded file
+file = request.files.get('resume')
+if not file or file.filename == '':
+return jsonify({"error": "No file uploaded"}), 400
+
+
+# Extract text from PDF
+query_text = extract_text_from_pdf(file)
+if not query_text:
+return jsonify({"error": "Uploaded PDF has no readable text"}), 400
+
+
+# Preprocess and get recommendations
+query_processed = preprocess(query_text)
+recommendations = recommendInternship(query_processed, internships, top_n=5)
+
+
+return jsonify(recommendations)
+
+
+except Exception as e:
+print(traceback.format_exc())
+return jsonify({"error": str(e)}), 500
+
+
+if __name__ == "__main__":
+app.run(debug=True)
 
 DATABASE = 'pm_internship.sqlite'
 CSV_FILE = 'pm_internship_data.csv'
