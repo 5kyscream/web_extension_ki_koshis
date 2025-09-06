@@ -341,6 +341,7 @@ def not_found(error):
 def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
-if __name__ == '__main__':
-    init_db()
-    app.run(debug=True, port=5001)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8080))  # Use Render's PORT if available
+    app.run(host="0.0.0.0", port=port)
+
