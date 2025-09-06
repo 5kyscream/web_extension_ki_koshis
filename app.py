@@ -5,6 +5,12 @@ import sqlite3, io, os, bcrypt, pandas as pd, random
 from functools import wraps
 from backend import recommendInternship
 import fitz  # PyMuPDF
+import nltk
+
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt')
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "a-secure-default-secret-key-for-development")
